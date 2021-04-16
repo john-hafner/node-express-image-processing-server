@@ -12,17 +12,14 @@ const imageProcessor = (filename) => {
   const sourcePath = uploadPathResolver(filename);
   const resizedDestination = uploadPathResolver('resized-' + filename);
   const monochromeDestination = uploadPathResolver('monochrome-' + filename);
-
   let resizeWorkerFinished = false;
   let monochromeWorkerFinished = false;
-
   return new Promise((resolve, reject) => {
     if (isMainThread) {
       try {
         const resizeWorker = new Worker(pathToResizeWorker, {
           workerData: { source: sourcePath, destination: resizedDestination },
         });
-
         resizeWorker.on('message', (message) => {
           resizeWorkerFinished = true;
           if (monochromeWorkerFinished) {
@@ -37,13 +34,22 @@ const imageProcessor = (filename) => {
             reject(new Error(`Exited with status code ${code}`));
           }
         });
-
         const monochromeWorker = new Worker(pathToMonochromeWorker, {
-          workerData: { source: sourcePath, destination: monochromeDestination },
+          workerData: {
+            source: sourcePath,
+            destination: monochromeDestination,
+          },
         });
+        /* const monochromeWorker = new Worker(pathToMonochromeWorker, {
+          workerData: {
+            source: sourcePath,
+            destination: monochromeDestination,
+          },
+        }); */
         monochromeWorker.on('message', (message) => {
           monochromeWorkerFinished = true;
           if (resizeWorkerFinished) {
+            console.log('monochromeWorker finishing');
             resolve('monochromeWorker finished processing');
           }
         });
@@ -56,6 +62,7 @@ const imageProcessor = (filename) => {
           }
         });
       } catch (err) {
+        console.error(err.message);
         reject(err);
       }
     } else {
